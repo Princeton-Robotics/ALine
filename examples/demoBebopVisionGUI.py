@@ -18,12 +18,12 @@ class UserVision:
         self.vision = vision
 
     def save_pictures(self, args):
-        #print("saving picture")
+        print("saving picture")
         img = self.vision.get_latest_valid_picture()
 
         if (img is not None):
-            filename = "test_image_%06d.png" % self.index
-            #cv2.imwrite(filename, img)
+            filename = "saved_images/test_image_%06d.png" % self.index
+            cv2.imwrite(filename, img)
             self.index +=1
 
 
@@ -45,7 +45,7 @@ def demo_user_code_after_vision_opened(bebopVision, args):
     if (bebopVision.vision_running):
         print("Moving the camera using velocity")
         bebop.pan_tilt_camera_velocity(pan_velocity=0, tilt_velocity=-2, duration=4)
-        bebop.smart_sleep(5)
+        bebop.smart_sleep(0.2)
 
         # land
         bebop.safe_land(5)
