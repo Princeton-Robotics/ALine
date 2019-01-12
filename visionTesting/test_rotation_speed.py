@@ -23,6 +23,13 @@ try:
 
 	print('Opening stream')
 	bebop.start_video_stream()
+
+	cam = cv2.VideoCapture("./bebop.sdp")
+
+	while True:
+		ret, frame = cam.read()
+		cv2.imshow("frame",frame)
+		cv2.waitKey(1)
 	#print('Opening with opencv')
 	#stream = cv2.VideoCapture("bebop.sdp")
 	print('done, wait 10 seconds')
