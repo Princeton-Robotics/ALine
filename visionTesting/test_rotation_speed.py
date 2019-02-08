@@ -13,11 +13,11 @@ try:
 	
 	bebop.ask_for_state_update()
 
-	bebop.safe_takeoff(10)
+	# bebop.safe_takeoff(10)
 
-	#bebop.set_max_rotation_speed(200)
+	# bebop.set_max_rotation_speed(200)
 	
-	bebop.fly_direct(roll=0, pitch=0, yaw=0, vertical_movement=90, duration=1)
+	# bebop.fly_direct(roll=0, pitch=0, yaw=0, vertical_movement=90, duration=1)
 	
 	bebop.smart_sleep(1)
 
@@ -41,8 +41,8 @@ try:
 	
 	#bebop.smart_sleep(1)
 	
-	#bebop.fly_direct(roll=0, pitch=0, yaw=100, vertical_movement=0, duration=5)
-	bebop.flip(direction="front")
+	# bebop.fly_direct(roll=0, pitch=0, yaw=100, vertical_movement=0, duration=5)
+	# bebop.flip(direction="front")
 	bebop.smart_sleep(1)
 	# bebop.flip(direction="right")
 	# bebop.smart_sleep(1)
