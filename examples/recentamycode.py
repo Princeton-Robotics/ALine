@@ -68,6 +68,16 @@ def draw_second_pictures(args):
 	centerX = width/2
 	centerY = height/2
 
+	theta_error_prior = 0
+	theta_integral = 0
+	theta_KP = 1
+	theta_KI = 0
+	theta_KD = 0
+	bias = 0
+
+	desired_value = 0
+	iteration_time = 0.1
+
 	if (lines is None):
 		print("no line found")
 	else:
@@ -84,11 +94,19 @@ def draw_second_pictures(args):
 			cv2.line(img,(x1,y1),(x2,y2),(255,0,0),2)
 			cv2.putText(img, 'r: ' + str(rho), (50,50), font, 1, (255, 0, 255), 2, cv2.LINE_AA)
 			cv2.putText(img, 'theta: ' + str(theta), (50,75), font, 1, (255,0,255), 2, cv2.LINE_AA)
-			dTheta = -min(theta, 2*math.pi-theta)
+			
+			theta_error = desired_value – theta
+			theta_integral = theta_integral + (theta_error*iteration_time)
+			theta_derivative = (theta_error – theta_error_prior)/iteration_time
+			theta_output = theta_KP*theta_error + theta_KI*theta_integral + theta_KD*theta_derivative + bias
+			error_prior = error
+
+			mambo.bebop.fly_direct(roll=0, pitch=0, yaw=25*theta_output, vertical_movement=0, duration=iteration_time)
 
 
 	cv2.imshow('houghlines3.jpg', img)
 	cv2.waitKey(100)
+	
 def demo_mambo_user_vision_function(mamboVision, args):
 	"""
 	Demo the user code to run with the run button for a mambo
