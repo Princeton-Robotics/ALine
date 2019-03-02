@@ -56,7 +56,9 @@ def draw_second_pictures(args):
 
 	lines = cv2.HoughLines(dst, 1,np.pi/180 , 70)
 
-	cv2.imshow('dst',dst)
+	ret,thresh1 = cv2.threshold(toFilter, 75,255, cv2.THRESH_BINARY_INV)
+
+	#cv2.imshow('dst',dst)
 
 	#if (lines == None):
 		#print("no line found")
@@ -74,9 +76,10 @@ def draw_second_pictures(args):
 	theta_KI = 0
 	theta_KD = 0
 	bias = 0
+	rho_sign = 0
 
 	desired_value = 0
-	iteration_time = 0.1
+	iteration_time = 1
 
 	if (lines is None):
 		print("no line found")
@@ -95,14 +98,57 @@ def draw_second_pictures(args):
 			cv2.putText(img, 'r: ' + str(rho), (50,50), font, 1, (255, 0, 255), 2, cv2.LINE_AA)
 			cv2.putText(img, 'theta: ' + str(theta), (50,75), font, 1, (255,0,255), 2, cv2.LINE_AA)
 			
-			theta_error = desired_value – theta
+			# theta_error = desired_value - theta
+			rho_sign = rho / abs(rho)
+			#want theta_error to be negative when drone is facing right of desired path.
+			#yaw goes from -100 to 100. 100 goes clkwise.
+			# if(rho_sign < 0):
+			# 	theta_error = desired_value - (math.pi + theta)
+			# else:
+			# 	theta_error = desired_value - theta
+			# if(rho_sign < 0):
+			# 	theta = (math.pi - theta)
+			# else:
+			# 	theta = -1 * theta
+
+			if(abs(x1-x2) > 5):
+				slope = ((y2 - y1)/(x2-x1))/abs((y2 - y1)/(x2-x1))
+			else:
+				slope =1
+
+			if(slope < 0):
+				theta = -1 * (theta)
+			else:
+				theta = math.pi - theta
+
+			theta_error = desired_value - theta
+
 			theta_integral = theta_integral + (theta_error*iteration_time)
-			theta_derivative = (theta_error – theta_error_prior)/iteration_time
+			theta_derivative = (theta_error - theta_error_prior)/iteration_time
 			theta_output = theta_KP*theta_error + theta_KI*theta_integral + theta_KD*theta_derivative + bias
-			error_prior = error
+			theta_error_prior = theta_error
+			theta_output = int(25*theta_output)
 
-			mambo.bebop.fly_direct(roll=0, pitch=0, yaw=25*theta_output, vertical_movement=0, duration=iteration_time)
+			cv2.putText(img, 'theta output: ' + str(theta_output), (50,100), font, 1, (255,0,255), 2, cv2.LINE_AA)
 
+				#finds red things and makes them white
+
+	#trying to crop and then analyze
+	# thresh2 = thresh1[int(y0)-50:int(y0)+50, int(x0)-50:int(x0)+50]
+	M = cv2.moments(thresh1)
+
+	if(M["m00"] != 0):
+		cX = int(M["m10"] / M["m00"])
+		cY = int(M["m01"] / M["m00"])
+	else:
+		cX =0
+		cY =0
+	cv2.circle(img, (cX, cY), 5, (0, 0, 255), -1)
+	cv2.imshow('thresh1', thresh1)
+	"""
+	MAKE SURE TO UNCOMMENT THIS WHEN FLYING!!!!!!!!!!!!!!!!!!!!!!!
+	"""
+	# mambo.fly_direct(roll=0, pitch=0, yaw=25*theta_output, vertical_movement=0, duration=iteration_time)
 
 	cv2.imshow('houghlines3.jpg', img)
 	cv2.waitKey(100)
@@ -116,19 +162,19 @@ def demo_mambo_user_vision_function(mamboVision, args):
 	mambo = args[0]
 
 	if (testFlying):
-		print("taking off!")
-		mambo.safe_takeoff(5)
+	# 	print("taking off!")
+	# 	mambo.safe_takeoff(5)
 
-		if (mambo.sensors.flying_state != "emergency"):
-			print("flying state is %s" % mambo.sensors.flying_state)
-			print("Flying direct: going up")
-			mambo.fly_direct(roll=0, pitch=0, yaw=0, vertical_movement=15, duration=2)
+		# if (mambo.sensors.flying_state != "emergency"):
+		# 	print("flying state is %s" % mambo.sensors.flying_state)
+		# 	print("Flying direct: going up")
+		# 	mambo.fly_direct(roll=0, pitch=0, yaw=0, vertical_movement=15, duration=2)
 
-			print("flip left")
-			print("flying state is %s" % mambo.sensors.flying_state)
-			success = mambo.flip(direction="left")
-			print("mambo flip result %s" % success)
-			mambo.smart_sleep(5)
+		# 	print("flip left")
+		# 	print("flying state is %s" % mambo.sensors.flying_state)
+		# 	success = mambo.flip(direction="left")
+		# 	print("mambo flip result %s" % success)
+		# 	mambo.smart_sleep(5)
 
 		print("landing")
 		print("flying state is %s" % mambo.sensors.flying_state)
@@ -146,7 +192,6 @@ def demo_mambo_user_vision_function(mamboVision, args):
 	print("disconnecting")
 	mambo.disconnect()
 
-
 if __name__ == "__main__":
 	# make my mambo object
 	# remember to set True/False for the wifi depending on if you are using the wifi or the BLE to connect
@@ -156,6 +201,7 @@ if __name__ == "__main__":
 
 	success = mambo.connect(num_retries=3)
 	print("connected: %s" % success)
+	mambo.pan_tilt_camera_velocity(-90,0,1)
 
 	if (success):
 		# get the state information
