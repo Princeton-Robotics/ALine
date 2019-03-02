@@ -9,7 +9,7 @@ import math
 # Speed of the drone
 S = 60
 # Frames per second of the pygame window display
-FPS = 25
+FPS = 40
 
 
 class FrontEnd(object):
@@ -24,17 +24,13 @@ class FrontEnd(object):
     """
 
     def __init__(self):
-        # Init pygame
+        # Init pygame.
         pygame.init()
 
-        # Creat pygame window
-        pygame.display.set_caption("Tello video stream")
-        self.screen = pygame.display.set_mode([960, 720])
-
-        # Init Tello object that interacts with the Tello drone
+        # Init Tello object that interacts with the Tello drone.
         self.tello = Tello()
 
-        # Drone velocities between -100~100
+        # Drone velocities between -100~100.
         self.for_back_velocity = 0
         self.left_right_velocity = 0
         self.up_down_velocity = 0
@@ -43,7 +39,7 @@ class FrontEnd(object):
 
         self.send_rc_control = False
 
-        # create update timer
+        # Create update timer.
         pygame.time.set_timer(USEREVENT + 1, 50)
 
 
@@ -68,6 +64,7 @@ class FrontEnd(object):
 
         frame_read = self.tello.get_frame_read()
 
+        # Display the video stream.
         should_stop = False
         while not should_stop:
 
@@ -88,14 +85,7 @@ class FrontEnd(object):
                 frame_read.stop()
                 break
 
-            self.screen.fill([0, 0, 0])
-            frame = cv2.cvtColor(frame_read.frame, cv2.COLOR_BGR2RGB)
-            frame = np.rot90(frame)
-            frame = np.flipud(frame)
-            frame = pygame.surfarray.make_surface(frame)
-            self.screen.blit(frame, (0, 0))
-            pygame.display.update()
-
+            # Separate feed with line recognition overlay.
             draw_second_picture(frame_read.frame)
 
             time.sleep(1 / FPS)
