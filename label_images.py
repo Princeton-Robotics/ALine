@@ -22,21 +22,21 @@ def click_and_crop(event, x, y, flags, param):
 		points_len = len(points)
 		font = font = cv2.FONT_HERSHEY_SIMPLEX
 		if (points_len == 1):
-			cv2.circle(curr_img, (x, y), 2, (0, 255, 0))
+			cv2.circle(curr_img, (x, y), 10, (0, 255, 0))
 			cv2.putText(curr_img, 'TopLeft', (x + 2, y + 2), font, 1, (255, 0, 0), 2)
 			cv2.imshow('image', curr_img)
 		elif(points_len == 2):
-			cv2.circle(curr_img, (x, y), 2, (0, 255, 0))
+			cv2.circle(curr_img, (x, y), 10, (0, 255, 0))
 			cv2.putText(curr_img, 'TopRight', (x + 2, y + 2), font, 1, (255, 0, 0), 2)
 			cv2.line(curr_img, points[0], points[1], (0,255,0), 2)
 			cv2.imshow('image', curr_img)
 		elif(points_len == 3):
-			cv2.circle(curr_img, (x, y), 2, (0, 255, 0))
+			cv2.circle(curr_img, (x, y), 10, (0, 255, 0))
 			cv2.putText(curr_img, 'BottomLeft', (x + 2, y + 2), font, 1, (255, 0, 0), 2)
 			cv2.line(curr_img, points[0], points[2], (0,255,0), 2)
 			cv2.imshow('image', curr_img)
 		elif(points_len == 4):
-			cv2.circle(curr_img, (x, y), 2, (0, 255, 0))
+			cv2.circle(curr_img, (x, y), 10, (0, 255, 0))
 			cv2.putText(curr_img, 'BottomRight', (x + 2, y + 2), font, 1, (255, 0, 0), 2)
 			cv2.line(curr_img, points[1], points[3], (0,255,0), 2)
 			cv2.line(curr_img, points[2], points[3], (0,255,0), 2)
@@ -72,16 +72,21 @@ def main():
 				print('Saving Points')
 				# Saving points
 				j = 0
-				with open(filename + '.txt', "w+") as out_file:
-					(oldwidth, oldh, oldc) = curr_img.shape
-					(newwidth, newh, newc) = curr_img_copy.shape
-					ratio = (newwidth / oldwidth)
-					while (j < 4):
-						points[j] = tuple(int(ratio * x) for x in points[j])
-						out_file.write(str(points[j]))
-						j = j + 1
+				if (not(len(points) == 4)):
+					print('Invalid number of points')
+					curr_img = curr_img_copy
+					curr_img = imutils.resize(curr_img, width = 500)
+				else:
+					with open(filename + '.txt', "w+") as out_file:
+						(oldwidth, oldh, oldc) = curr_img.shape
+						(newwidth, newh, newc) = curr_img_copy.shape
+						ratio = (newwidth / oldwidth)
+						while (j < 4):
+							points[j] = tuple(int(ratio * x) for x in points[j])
+							out_file.write(str(points[j]))
+							j = j + 1
+					i = i + 1
 				points = []
-				i = i + 1
 			else:
 				print('Invalid key press')
 		else:
