@@ -1,4 +1,6 @@
 import sys
+import cv2 as cv
+import imutils as utils
 import tensorflow as tf
 import numpy as np
 from PIL import Image
@@ -38,8 +40,62 @@ def main(image_filename):
     od_model = TFObjectDetection(graph_def, labels)
 
     image = Image.open(image_filename)
+    cvImage = cv.imread(image_filename)
     predictions = od_model.predict_image(image)
     print(predictions)
+
+    width, height = image.size
+    print("IMAGE: ", width, height)
+
+    prediction = predictions[0]
+    leftXCoor = int(prediction['boundingBox']['left'] * width)
+    leftYCoor = int(prediction['boundingBox']['top'] * height)
+    sizeX = prediction['boundingBox']['width'] * width
+    sizeY = prediction['boundingBox']['height'] * height
+    rightXCoor = int(leftXCoor + sizeX)
+    rightYCoor = int(leftYCoor + sizeY)
+    print(leftXCoor, leftYCoor)
+
+    kernel = np.array((
+        [-1,-1,-1],
+        [-1,8,-1],
+        [-1,-1,-1]
+    ))
+
+    # cvImage = cvImage[leftXCoor:rightXCoor,leftYCoor:rightYCoor]
+    # lines = cv.filter2D(cvImage[:,:,2], -1, kernel)
+    leftXCoor = max(0, leftXCoor)
+    leftYCoor = max(0, leftYCoor)
+    rightXCoor = min(rightXCoor, width - 1)
+    rightYCoor = min(rightYCoor, height - 1)
+
+    # lines = cv.filter2D(cvImage[leftXCoor:rightXCoor,leftYCoor:rightYCoor,:2], -1, kernel)
+
+    # th, dst = cv.threshold(lines, 100, 255, cv.THRESH_BINARY)
+
+    # lines = cv.HoughLines(dst, 1, np.pi/180 , 70)
+
+    if (0):
+        for line in lines:
+            for rho, theta in line:
+                a = np.cos(theta)
+                b = np.sin(theta)
+                x0 = a*rho
+                y0 = b*rho
+                x1 = int(x0 + 1000*(-b))
+                y1 = int(y0 + 1000*(a))
+                x2 = int(x0 - 1000*(-b))
+                y2 = int(y0 - 1000*(a))
+
+                # cv.line(cvImage,(x1,y1),(x2,y2),(0,255,0),2)
+    
+    cv.rectangle(cvImage, (leftXCoor, leftYCoor), (rightXCoor, rightYCoor), (255, 0, 0), 2)
+
+    cv.imshow("img", utils.resize(cvImage, width = 600))
+    cv.waitKey(0)
+    cv.destroyAllWindows()
+
+
     
 if __name__ == '__main__':
     if len(sys.argv) <= 1:

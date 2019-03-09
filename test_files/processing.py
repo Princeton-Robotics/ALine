@@ -28,9 +28,9 @@ while(True):
     ))'''
 
     kernal = np.array((
-        [-1,2,-1],
-        [-1,2,-1],
-        [-1,2,-1]
+        [-1,-1,-1],
+        [-1,8,-1],
+        [-1,-1,-1]
     ))
 
     kernalDiagonal = np.array((
