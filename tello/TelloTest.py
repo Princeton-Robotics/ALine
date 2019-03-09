@@ -153,15 +153,12 @@ def draw_second_picture(image):
     img = image
 
     # if the images is invalid, return
-    if (img is None):
+    if img is None:
         return
 
-    # put the roll and pitch at the top of the screen
-    # cv2.putText(img, 'demo text', (50, 50), font, 1, (255, 0, 255), 2, cv2.LINE_AA)
-    # cv2.imshow("MarkerStream", img)
-    # cv2.waitKey(1000)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    kernal = np.array((
+    kernel = np.array((
         [-1, -1, -1],
         [-1, 8, -1],
         [-1, -1, -1]
@@ -169,43 +166,36 @@ def draw_second_picture(image):
 
     toFilter = img[:, :, 2] - img[:, :, 1] - img[:, :, 0]
 
-    lines = cv2.filter2D(toFilter, -1, kernal)
+    line_img = cv2.filter2D(toFilter, -1, kernel)
 
-    th, dst = cv2.threshold(lines, 100, 255, cv2.THRESH_BINARY)
+    kernel_size = 5
+    blur_gray = cv2.GaussianBlur(gray,(kernel_size, kernel_size),0)
 
-    lines = cv2.HoughLines(dst, 1, np.pi / 180, 70)
+    thresh_low = 50
+    thresh_high = 150
+    edges = cv2.Canny(blur_gray, thresh_low, thresh_high)
 
-    cv2.imshow('dst', dst)
+    rho = 1
+    theta = np.pi / 180
+    threshold = 70
+    min_len = 50
+    max_gap = 20
 
-    # if (lines == None):
-    # print("no line found")
-    # else:
+    lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]), min_len, max_gap)
 
-    # height: 480 width: 856
-
-    height, width, channels = img.shape
-    centerX = width / 2
-    centerY = height / 2
+    # height, width, channels = img.shape
+    # centerX = width / 2
+    # centerY = height / 2
 
     if (lines is None):
         print("no line found")
     else:
-        for rho, theta in lines[0]:
-            a = np.cos(theta)
-            b = np.sin(theta)
-            x0 = a * rho
-            y0 = b * rho
-            x1 = int(x0 + 1000 * (-b))
-            y1 = int(y0 + 1000 * (a))
-            x2 = int(x0 - 1000 * (-b))
-            y2 = int(y0 - 1000 * (a))
+        for line in lines:
+            for x1, y1, x2, y2 in line:
+                cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 5)
 
-            cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
-            # cv2.putText(img, 'r: ' + str(rho), (50, 50), font, 1, (255, 0, 255), 2, cv2.LINE_AA)
-            # cv2.putText(img, 'theta: ' + str(theta), (50, 75), font, 1, (255, 0, 255), 2, cv2.LINE_AA)
-            dTheta = -min(theta, 2 * math.pi - theta)
-
-    cv2.imshow('houghlines3.jpg', img)
+    # cv2.imshow('img', img)
+    cv2.imshow('lines', line_img)
     cv2.waitKey(100)
 
 
