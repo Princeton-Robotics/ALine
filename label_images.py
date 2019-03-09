@@ -2,7 +2,6 @@ import cv2
 import os
 import sys
 import numpy as np
-import getch
 import imutils
 
 image_directory = sys.argv[1]
