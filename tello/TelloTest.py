@@ -27,6 +27,10 @@ class FrontEnd(object):
         # Init pygame.
         pygame.init()
 
+        # Creat pygame window
+        pygame.display.set_caption("Tello video stream")
+        self.screen = pygame.display.set_mode([960, 720])
+
         # Init Tello object that interacts with the Tello drone.
         self.tello = Tello()
 
@@ -84,8 +88,16 @@ class FrontEnd(object):
                 frame_read.stop()
                 break
 
+            self.screen.fill([0, 0, 0])
+            frame = cv2.cvtColor(draw_segments(frame_read.frame), cv2.COLOR_BGR2RGB)
+            frame = np.rot90(frame)
+            frame = np.flipud(frame)
+            frame = pygame.surfarray.make_surface(frame)
+            self.screen.blit(frame, (0, 0))
+            pygame.display.update()
+
             # Separate feed with line recognition overlay.
-            draw_segments(frame_read.frame)
+            # draw_segments(frame_read.frame)
 
             time.sleep(1 / FPS)
 
@@ -141,6 +153,11 @@ class FrontEnd(object):
                                        self.yaw_velocity)
 
 
+def get_frame_error(x1, y1, x2, y2):
+        length = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+        return (x2 - x1) / length
+
+
 def draw_segments(image):
     """
     Grab the latest stream from the drone and draw it in a second opencv window with some text to show that it
@@ -182,10 +199,13 @@ def draw_segments(image):
     else:
         line = lines[0]
         for x1, y1, x2, y2 in line:
+            # error = get_error(x1, y1, x2, y2)
             cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 5)
 
-    cv2.imshow('segment', img)
-    cv2.waitKey(100)
+    # cv2.imshow('segment', img)
+    # cv2.waitKey(100)
+
+    return img
 
 
 def main():
