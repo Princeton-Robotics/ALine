@@ -98,7 +98,7 @@ def main():
 						for thesePoints in pointsList:
 							j = 0
 							while (j < 4):
-								thesePoints[j] = tuple(int(ratio * x) for x in points[j])
+								thesePoints[j] = tuple(int(ratio * x) for x in thesePoints[j])
 								out_file.write(str(thesePoints[j]))
 								j = j + 1
 							out_file.write('\n')
