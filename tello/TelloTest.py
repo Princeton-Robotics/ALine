@@ -42,7 +42,6 @@ class FrontEnd(object):
         # Create update timer.
         pygame.time.set_timer(USEREVENT + 1, 50)
 
-
     def run(self):
 
         if not self.tello.connect():
@@ -86,7 +85,7 @@ class FrontEnd(object):
                 break
 
             # Separate feed with line recognition overlay.
-            draw_second_picture(frame_read.frame)
+            draw_segments(frame_read.frame)
 
             time.sleep(1 / FPS)
 
@@ -142,7 +141,7 @@ class FrontEnd(object):
                                        self.yaw_velocity)
 
 
-def draw_second_picture(image):
+def draw_segments(image):
     """
     Grab the latest stream from the drone and draw it in a second opencv window with some text to show that it
     is being processed
@@ -153,59 +152,39 @@ def draw_second_picture(image):
     img = image
 
     # if the images is invalid, return
-    if (img is None):
+    if img is None:
         return
 
-    # put the roll and pitch at the top of the screen
-    # cv2.putText(img, 'demo text', (50, 50), font, 1, (255, 0, 255), 2, cv2.LINE_AA)
-    # cv2.imshow("MarkerStream", img)
-    # cv2.waitKey(1000)
-
-    kernal = np.array((
+    kernel = np.array((
         [-1, -1, -1],
         [-1, 8, -1],
         [-1, -1, -1]
     ))
 
-    toFilter = img[:, :, 2] - img[:, :, 1] - img[:, :, 0]
+    to_filter = img[:, :, 2] - img[:, :, 1] - img[:, :, 0]
 
-    lines = cv2.filter2D(toFilter, -1, kernal)
+    line_img = cv2.filter2D(to_filter, -1, kernel)
 
-    th, dst = cv2.threshold(lines, 100, 255, cv2.THRESH_BINARY)
+    th, dst = cv2.threshold(line_img, 100, 255, cv2.THRESH_BINARY)
 
-    lines = cv2.HoughLines(dst, 1, np.pi / 180, 70)
+    rho = 1
+    theta = np.pi / 180
+    threshold = 70
+    min_len = 70
+    max_gap = 70
 
-    cv2.imshow('dst', dst)
+    # Find all the line segments in the image, returned in an array.
+    lines = cv2.HoughLinesP(dst, rho, theta, threshold, np.array([]), min_len, max_gap)
 
-    # if (lines == None):
-    # print("no line found")
-    # else:
-
-    # height: 480 width: 856
-
-    height, width, channels = img.shape
-    centerX = width / 2
-    centerY = height / 2
-
-    if (lines is None):
+    # Overlay the first (longest) line on the original image.
+    if lines is None:
         print("no line found")
     else:
-        for rho, theta in lines[0]:
-            a = np.cos(theta)
-            b = np.sin(theta)
-            x0 = a * rho
-            y0 = b * rho
-            x1 = int(x0 + 1000 * (-b))
-            y1 = int(y0 + 1000 * (a))
-            x2 = int(x0 - 1000 * (-b))
-            y2 = int(y0 - 1000 * (a))
+        line = lines[0]
+        for x1, y1, x2, y2 in line:
+            cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 5)
 
-            cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
-            # cv2.putText(img, 'r: ' + str(rho), (50, 50), font, 1, (255, 0, 255), 2, cv2.LINE_AA)
-            # cv2.putText(img, 'theta: ' + str(theta), (50, 75), font, 1, (255, 0, 255), 2, cv2.LINE_AA)
-            dTheta = -min(theta, 2 * math.pi - theta)
-
-    cv2.imshow('houghlines3.jpg', img)
+    cv2.imshow('segment', img)
     cv2.waitKey(100)
 
 
