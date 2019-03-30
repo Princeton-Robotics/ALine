@@ -42,7 +42,6 @@ class FrontEnd(object):
         # Create update timer.
         pygame.time.set_timer(USEREVENT + 1, 50)
 
-
     def run(self):
 
         if not self.tello.connect():
@@ -86,7 +85,7 @@ class FrontEnd(object):
                 break
 
             # Separate feed with line recognition overlay.
-            draw_second_picture(frame_read.frame)
+            draw_segments(frame_read.frame)
 
             time.sleep(1 / FPS)
 
@@ -142,7 +141,7 @@ class FrontEnd(object):
                                        self.yaw_velocity)
 
 
-def draw_second_picture(image):
+def draw_segments(image):
     """
     Grab the latest stream from the drone and draw it in a second opencv window with some text to show that it
     is being processed
@@ -156,46 +155,36 @@ def draw_second_picture(image):
     if img is None:
         return
 
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
     kernel = np.array((
         [-1, -1, -1],
         [-1, 8, -1],
         [-1, -1, -1]
     ))
 
-    toFilter = img[:, :, 2] - img[:, :, 1] - img[:, :, 0]
+    to_filter = img[:, :, 2] - img[:, :, 1] - img[:, :, 0]
 
-    line_img = cv2.filter2D(toFilter, -1, kernel)
+    line_img = cv2.filter2D(to_filter, -1, kernel)
 
-    kernel_size = 5
-    blur_gray = cv2.GaussianBlur(gray,(kernel_size, kernel_size),0)
-
-    thresh_low = 50
-    thresh_high = 150
-    edges = cv2.Canny(blur_gray, thresh_low, thresh_high)
+    th, dst = cv2.threshold(line_img, 100, 255, cv2.THRESH_BINARY)
 
     rho = 1
     theta = np.pi / 180
     threshold = 70
-    min_len = 50
-    max_gap = 20
+    min_len = 70
+    max_gap = 70
 
-    lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]), min_len, max_gap)
+    # Find all the line segments in the image, returned in an array.
+    lines = cv2.HoughLinesP(dst, rho, theta, threshold, np.array([]), min_len, max_gap)
 
-    # height, width, channels = img.shape
-    # centerX = width / 2
-    # centerY = height / 2
-
-    if (lines is None):
+    # Overlay the first (longest) line on the original image.
+    if lines is None:
         print("no line found")
     else:
-        for line in lines:
-            for x1, y1, x2, y2 in line:
-                cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 5)
+        line = lines[0]
+        for x1, y1, x2, y2 in line:
+            cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 5)
 
-    # cv2.imshow('img', img)
-    cv2.imshow('lines', line_img)
+    cv2.imshow('segment', img)
     cv2.waitKey(100)
 
 
