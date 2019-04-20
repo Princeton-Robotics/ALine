@@ -8,6 +8,21 @@ import time
 import math
 import sys
 
+# CURRENT GOAL: we will use two pid controllers to center the drone on
+# the line, and to correct the angle. We will use the simple_pid library
+# to make life easier. We will move to the raspberry pi because tello
+# video/livestream sampling is a bit troublesome
+
+# process in while loop
+# 1: read frame
+# 2: find lines and other information
+# 3: extract current angle and distance from midpoint of the screen
+# 4: pass values to respective PID loops/controllers
+# 5: pass PID outputs to fly instructions
+# 6: take over the world
+
+
+
 # Speed of the drone
 S = 60
 # Frames per second of the pygame window display
@@ -155,7 +170,8 @@ class FrontEnd(object):
             self.tello.send_rc_control(self.left_right_velocity, self.for_back_velocity, self.up_down_velocity,
                                        self.yaw_velocity)
 
-
+# calculates the angle difference between current and straight. Takes
+# input of 2 xy coordinates and returns a double between -pi/2 and pi/2
 def get_frame_error(x1, y1, x2, y2):
     length = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
     sin_angle = (x2 - x1) / length
@@ -165,12 +181,14 @@ def get_frame_error(x1, y1, x2, y2):
         direction = mid/abs(mid)
         return math.pi/2 * direction
     return -np.arcsin(sin_angle)*sign
-
+# returns the midpoint of the line. takes input of 2 xy coordinates
+# returns a double type midpoint
 def get_midpoint(x1, y1, x2, y2):
     midx = (x1 + x2)/2
     # midy = (y1 + y2)/2
     return midx
-
+# finds lines in red space in an input image. returns an array of xy
+# coordinates, ordered in decreasing length
 def get_coordinates(image):
     img = image
 
@@ -200,6 +218,10 @@ def get_coordinates(image):
     lines = cv2.HoughLinesP(dst, rho, theta, threshold, np.array([]), min_len, max_gap)
 
     return lines
+
+# draws stuff on the current image. Shows the longest line, the midpoint and
+# the distance from the midpoint of the current line to the midpoint of the 
+# screen.
 def draw_segments(image):
     """
     Grab the latest stream from the drone and draw it in a second opencv window with some text to show that it
@@ -264,6 +286,8 @@ def draw_segments(image):
 
 #arg 0 = frame error (angle control)
 #arg 1 - 4 = coordinates detected
+
+# debugging window. Prints stuff such as angle error, coordinates, and midpoint
 def display_values(frame_error, X1, Y1, X2, Y2, image):
     # Create a black image
     img = np.zeros((512,512,3), np.uint8)
