@@ -162,8 +162,8 @@ def draw_segments(image):
     """
     Grab the latest stream from the drone and draw it in a second opencv window with some text to show that it
     is being processed
-    :param image:
-    :return:
+    :param image: The image to be processed
+    :return: The image with a line segment overlay
     """
 
     img = image
