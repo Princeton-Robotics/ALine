@@ -1,5 +1,1 @@
-/examples/saved_images/*
-
-*.png
-
-/.idea/*
+hoop_images/**
