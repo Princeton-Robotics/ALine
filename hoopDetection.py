@@ -2,30 +2,39 @@ import cv2
 from sklearn.cluster import KMeans
 import numpy as np
 import imutils
+import sys
 
 # cap = cv2.VideoCapture(0)
 
 while(1):
    # Take each frame
    # _, frame = cap.read()
-   frame = cv2.imread('hoop_images/Chris/IMG_2777.jpg')
+   frame = cv2.imread(sys.argv[1])
    frame = imutils.resize(frame, width = 500)
    height, width, depth = frame.shape
 
    # Convert BGR to HSV
    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+   h = hsv[:,:,0]
 
    # define range of blue color in HSV
-   lower_orange = np.array([5, 170, 100])
-   upper_orange = np.array([15, 255, 255])
+   # lower_orange = np.array([5, 170, 100])
+   # upper_orange = np.array([15, 255, 255])
 
    # Threshold the HSV image to get only blue colors
-   mask = cv2.inRange(hsv, lower_orange, upper_orange)
+   #mask = cv2.inRange(h, 12, 15)
+   h[h<5] = 0
+   h[h>15] = 0
+   h[h>=5] = 1
 
    # Bitwise-AND mask and original image
-   res = cv2.bitwise_and(frame, frame, mask=mask)
+   res = h[:,:,np.newaxis] * frame
+   cv2.imshow('h', h * 255)
+   k = cv2.waitKey(10000)
+   cv2.imshow('res', res)
+   k = cv2.waitKey(10000)
 
-   _, cnts, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+   cnts, _ = cv2.findContours(h, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
    maxArea = 0
    maxContour = None
    for cnt in cnts:
@@ -43,11 +52,38 @@ while(1):
    # cv2.drawContours(frame, minHull, -1, (255, 0, 0), 3)
    # cv2.drawContours(frame, minDP, -1, (0, 0, 255), 3)
 
-   lines = cv2.HoughLinesP(blank[:,:,0], 1,np.pi/180 , 180)
+   cv2.imshow('blank', blank)
+   k = cv2.waitKey(10000)
+
+   oldLines = cv2.HoughLines(blank[:,:,0], 1,np.pi/180 , 180)
+   print(oldLines.shape)
+   lines = []
+   for line in oldLines:
+      for rho, theta in line:
+         a = np.cos(theta)
+         b = np.sin(theta)
+         x0 = a*rho
+         y0 = b*rho
+         x1 = int(x0 + 1000*(-b))
+         y1 = int(y0 + 1000*(a))
+         x2 = int(x0 - 1000*(-b))
+         y2 = int(y0 - 1000*(a))
+         lines.append([x1, y1, x2, y2])
+
+   if lines is None:
+      print("there are no lines")
+      break
+
+   for i in range(len(lines)):
+      x1, y1, x2, y2 = lines[i]
+      cv2.line(blank, (x1, y1), (x2, y2), (0,  0, 255), 2)
+
+   cv2.imshow('blank', blank)
+   k = cv2.waitKey(10000)
 
    points = []
    for i in range(len(lines)):
-      x1, y1, x2, y2 = lines[i][0]
+      x1, y1, x2, y2 = lines[i]
       for j in range(i + 1, len(lines)):
          x3, y3, x4, y4 = lines[j][0]
          m1 = (y2 - y1) / (x2 - x1 + 0.001)
@@ -69,6 +105,10 @@ while(1):
 
 
    
+   if not len(points) == 4:
+      print("Not 4 points")
+      break
+
    kmeans = KMeans(n_clusters=4, random_state=0).fit(points)
    print("CLUSTERS:", kmeans.cluster_centers_)
    for point in kmeans.cluster_centers_:
@@ -77,11 +117,11 @@ while(1):
    # blank = cv2.cornerHarris(blank[:,:,0], 2, 3, 0.04)
    # blank = cv2.dilate(blank, None)
 
-   cv2.imshow('mask', mask)
+   cv2.imshow('h', h)
    cv2.imshow('frame', frame)
    cv2.imshow('res', res)
    cv2.imshow('blank', blank)
-   k = cv2.waitKey(10000)
+   k = cv2.waitKey(1)
    if k == 27:
       break
 
