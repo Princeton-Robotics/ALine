@@ -52,9 +52,6 @@ def main():
     sum = sum / len(pointsA)
     print('Mean algebraic error: ' + str(sum))
 
-    
-
-
 
 if __name__ == '__main__':
     main()

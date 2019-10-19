@@ -1,2 +1,0 @@
-10.24.131.203 = raspberry pi ip
-roboticsclub
