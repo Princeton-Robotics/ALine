@@ -10,14 +10,18 @@ W = [[0, -1, 0], [1, 0, 0], [0, 0, 1]]
 InvW = [[0, 1, 0], [-1, 0, 0], [0, 0, 1]]
 Z = [[0, 1, 0], [-1, 0, 0], [0, 0, 0]]
 
-def get_essential_matrix(kpA, kpB):
-    assert(len(kpA) == len(kpB))
-    # print(len(kpA))
+def find_eigenvalues(A):
+    U, D, V_t = np.linalg.svd(A, full_matrices=False)
+    print("Eigenvalues:")
+    print(D)
 
-    coefficient_matrix = np.zeros((len(kpA), 9))
-    for i in range(len(kpA)):
-        pointA = kpA[i].pt
-        pointB = kpB[i].pt
+def analyze_keypoints(keypoints1, keypoints2):
+    assert(len(keypoints1) == len(keypoints2))
+
+    coefficient_matrix = np.zeros((len(keypoints1), 9))
+    for i in range(len(keypoints1)):
+        pointA = keypoints1[i].pt
+        pointB = keypoints2[i].pt
         coefficient_matrix[i][0] = pointA[0] * pointB[0]
         coefficient_matrix[i][1] = pointA[1] * pointB[0] 
         coefficient_matrix[i][2] = pointB[0]
@@ -29,81 +33,77 @@ def get_essential_matrix(kpA, kpB):
         coefficient_matrix[i][8] = 1
 
     U, D, V_t = np.linalg.svd(coefficient_matrix, full_matrices = False)
-    essential = np.reshape(V_t[-1], (3, 3))
+    essential_matrix = np.reshape(V_t[-1], (3, 3))
 
-    U2, D2, Vt2 = np.linalg.svd(essential)
-    # set D to [1 1 0]?
+    U2, D2, Vt2 = np.linalg.svd(essential_matrix)
     D2 = [1, 1, 0]
 
-    print("Diagonal Matrix:")
-    print(D2)
+    essential_matrix = U2 @ np.diag(D2) @ Vt2
+    translation = U2 @ W @ np.diag(D2) @ U2.T
+    rotation = U2 @ InvW @ Vt2
 
-    essential = np.matmul(np.matmul(U2, np.diag(D2)), Vt2)
-    t = U2 @ W @ np.diag(D2) @ U2.T
-    R = U2 @ InvW @ Vt2
-    return essential, t, R
+    # find_eigenvalues(rotation)
+
+    return essential_matrix, translation, rotation
 
 def get_epipole(essential, pointA, pointB):
     x = np.append(np.array(pointB), 1)
     xt = np.transpose(np.append(np.array(pointA), 1))
     
-    # print(x)
-    # print(xt)
-    
-    result = np.matmul(xt, np.matmul(essential, x))
+    result = xt @ essential @ x
 
     return result
 
-def main():
+def find_epipole_error(keypoints, essential_matrix):
+    total_error = 0
+    for point in keypoints:
+        total_error += get_epipole(essential_matrix, point.pt, point.pt)
+    print("Average Error:")
+    print(total_error / len(keypoints))
 
+def validate_key_points(img1, img2):
+    cv2.imshow('Image 1', img1)
+    cv2.imshow('Image 2', img2)
+    cv2.waitKey(0)
+
+def main():
     image1 = sys.argv[1]
     image2 = sys.argv[2]
 
-    a = cv2.imread(image1)
-    b = cv2.imread(image2)
+    img1 = cv2.imread(image1)
+    img2 = cv2.imread(image2)
 
-    print(image1, image2)
-    print(a, b)
+    img1 = imutils.resize(img1, width=500)
+    img2 = imutils.resize(img2, width=500)
 
-    a = imutils.resize(a, width=500)
-    b = imutils.resize(b, width=500)
+    keypoints1, keypoints2 = mf(img1, img2)
 
-    kpA, kpB = mf(a, b)
-    
-
-    for i in range(0, len(kpA)):
-        point = kpA[i].pt
+    for i in range(0, len(keypoints1)):
+        point = keypoints1[i].pt
         point = (int(point[0]), int(point[1]))
-        cv2.circle(a,point, 7, (0,0,255), -1)
-    for i in range(0, len(kpB)):
-        point = kpB[i].pt
+        cv2.circle(img1, point, 7, (0,0,255), -1)
+    for i in range(0, len(keypoints2)):
+        point = keypoints2[i].pt
         point = (int(point[0]), int(point[1]))
-        cv2.circle(b,point, 7, (0,0,255), -1)
+        cv2.circle(img2, point, 7, (0,0,255), -1)
 
-    #cv2.imshow('A', a)
-    #cv2.imshow('B', b)
-    #cv2.waitKey(0)
+    # validate_key_points(img1, img2)
 
-    #keyPointsA = [[1,2],[3,4]]
-    #keyPointsB = [[5,6],[7,8]]
-
-    e, t, r = get_essential_matrix(kpA, kpB)
+    essential_matrix, translation_matrix, rotation = analyze_keypoints(keypoints1, keypoints2)
     print("ESSENTIAL MATRIX")
-    print(e)
+    print(essential_matrix)
     print("ROTATION")
-    print(r)
+    print(rotation)
 
-    t1 = t[2][1]
-    t2 = t[0][2]
-    t3 = t[1][0]
-    t_v = [t1, t2, t3]
+    t1 = translation_matrix[2][1]
+    t2 = translation_matrix[0][2]
+    t3 = translation_matrix[1][0]
+    translation = [t1, t2, t3]
 
     print("TRANSLATION")
-    print(t_v)
+    print(translation)
 
-    for i in range(len(kpA)):
-        error = get_epipole(e, kpA[i].pt, kpB[i].pt)
-        # print("ERROR: ", error)
+    find_epipole_error(keypoints1, essential_matrix)
 
 if __name__ == '__main__':
     main()

@@ -31,7 +31,6 @@ def match_features_orb_desc(kpA, desA, im2):
     matches = flann.knnMatch(desA,desB,k=2)
     # print(matches[0])
     for i,(m,n) in enumerate(matches):
-        print(matches[i])
         if m.distance >= 0.7 *n.distance: # Aparently determined in some paper to work well
             matches[i] = 'Apple'
     matches[:] = [match for match in matches if match != 'Apple']
