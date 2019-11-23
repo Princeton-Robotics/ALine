@@ -9,10 +9,14 @@ def match_features_orb(im1, im2):
     kpB, desB = orb.detectAndCompute(im2, None)
     index_params = dict(algorithm = FLANN_INDEX_LSH, table_number = 6, key_size = 12, multi_probe_level = 1)
     flann = cv2.FlannBasedMatcher(index_params, dict())
-    matches = flann.knnMatch(desA,desB,k=2)
+    matches = flann.knnMatch(desA, desB, k=2)
     goodKeyPointsA = []
     goodKeyPointsB = []
-    for i,(m,n) in enumerate(matches):
+    for i, match in enumerate(matches):
+        if len(match) < 2:
+            print(i, "could not unpack error")
+            continue
+        m, n = match
         if m.distance < 0.7 * n.distance: # Aparently determined in some paper to work well
             goodMatch = m
             goodKeyPointsA.append(kpA[goodMatch.queryIdx])
@@ -52,4 +56,5 @@ def test():
     cv2.imshow('B', b)
     cv2.waitKey(0)
 
-test()
+if __name__ == '__main__':
+    test()
