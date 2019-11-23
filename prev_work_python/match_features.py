@@ -52,4 +52,4 @@ def test():
     cv2.imshow('B', b)
     cv2.waitKey(0)
 
-test()
+#test()
