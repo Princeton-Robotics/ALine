@@ -13,9 +13,12 @@ def triangulation(r, t, k, p1, p2):
 
     z1 = -part1 / part2
 
-    return invK @ z1 @ h1
+    if z1[-1] < 0:
+        return None
+    else:
+        return invK @ (z1 * h1)
 
 def hat(v):
     return np.array([[0, -v[2], v[1]],
                      [v[2], 0, -v[0]],
-                     [-v[1], v[0], 0])
+                     [-v[1], v[0], 0]])

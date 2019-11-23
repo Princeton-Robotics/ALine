@@ -1,17 +1,19 @@
 from match_features import match_features_orb as mf
+from triangles import triangulation
 import sys
 import cv2
 import numpy as np
 import imutils
 
-focal_length = 28 / 1000
+FOCAL_LENGTH = 26
 
 W = [[0, -1, 0], [1, 0, 0], [0, 0, 1]]
 InvW = [[0, 1, 0], [-1, 0, 0], [0, 0, 1]]
 Z = [[0, 1, 0], [-1, 0, 0], [0, 0, 0]]
+K = np.diag([FOCAL_LENGTH, FOCAL_LENGTH, 1])
 
 def find_eigenvalues(A):
-    U, D, V_t = np.linalg.svd(A, full_matrices=False)
+    U, D, V_t = np.linalg.svd(A)
     print("Eigenvalues:")
     print(D)
 
@@ -40,11 +42,12 @@ def analyze_keypoints(keypoints1, keypoints2):
 
     essential_matrix = U2 @ np.diag(D2) @ Vt2
     translation = U2 @ W @ np.diag(D2) @ U2.T
-    rotation = U2 @ InvW @ Vt2
-
+    rotation1 = U2 @ np.matrix(InvW) @ Vt2
+    rotation2 = U2 @ np.matrix(InvW).T @ Vt2
+    
     # find_eigenvalues(rotation)
 
-    return essential_matrix, translation, rotation
+    return essential_matrix, translation, [rotation1, rotation2]
 
 def get_epipole(essential, pointA, pointB):
     x = np.append(np.array(pointB), 1)
@@ -66,6 +69,11 @@ def validate_key_points(img1, img2):
     cv2.imshow('Image 2', img2)
     cv2.waitKey(0)
 
+def print_3d_points(point_array):
+    print("POINTS")
+    for pt in point_array:
+        print(pt)
+
 def main():
     image1 = sys.argv[1]
     image2 = sys.argv[2]
@@ -81,29 +89,57 @@ def main():
     for i in range(0, len(keypoints1)):
         point = keypoints1[i].pt
         point = (int(point[0]), int(point[1]))
-        cv2.circle(img1, point, 7, (0,0,255), -1)
+        cv2.circle(img1, point, 7, (0, 0, 20*i % 255), -1)
     for i in range(0, len(keypoints2)):
         point = keypoints2[i].pt
         point = (int(point[0]), int(point[1]))
-        cv2.circle(img2, point, 7, (0,0,255), -1)
+        cv2.circle(img2, point, 7, (0, 0, 20*i % 255), -1)
 
     # validate_key_points(img1, img2)
 
-    essential_matrix, translation_matrix, rotation = analyze_keypoints(keypoints1, keypoints2)
+    essential_matrix, translation_matrix, rotations = analyze_keypoints(keypoints1, keypoints2)
     print("ESSENTIAL MATRIX")
     print(essential_matrix)
-    print("ROTATION")
-    print(rotation)
+    print("ROTATIONS")
+    print(rotations)
 
     t1 = translation_matrix[2][1]
     t2 = translation_matrix[0][2]
     t3 = translation_matrix[1][0]
-    translation = [t1, t2, t3]
+    translation = np.array([t1, t2, t3])
+    
+    translations = [translation, -1 * translation]
 
     print("TRANSLATION")
     print(translation)
 
+    print(essential_matrix @ translation)
+
     find_epipole_error(keypoints1, essential_matrix)
+
+    point_pairs = zip(keypoints1, keypoints2)
+    points_in_3d = []
+    check_failed = False
+    for rotation in rotations:
+        for translation in translations:
+            check_failed = False
+            for point1, point2 in point_pairs:
+                result = triangulation(rotation, translation, K, point1.pt, point2.pt)
+                if result is None:
+                    check_failed = True
+                    print(len(points_in_3d))
+                    points_in_3d = []
+                    break
+                else:
+                    points_in_3d.append(result)
+            
+            if not check_failed:
+                break
+            
+        if not check_failed:
+            break
+
+    print_3d_points(points_in_3d)
 
 if __name__ == '__main__':
     main()
