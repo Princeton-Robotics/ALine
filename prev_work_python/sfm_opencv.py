@@ -1,5 +1,4 @@
 from match_features import match_features_orb as mf
-from triangles import triangulation
 import sys
 import cv2
 import numpy as np
@@ -9,8 +8,6 @@ from mpl_toolkits.mplot3d import Axes3D
 
 FOCAL_LENGTH = 26
 
-W = [[0, -1, 0], [1, 0, 0], [0, 0, 1]]
-InvW = [[0, 1, 0], [-1, 0, 0], [0, 0, 1]]
 Z = [[0, 1, 0], [-1, 0, 0], [0, 0, 0]]
 K = np.diag([FOCAL_LENGTH, FOCAL_LENGTH, 1])
 
@@ -19,62 +16,26 @@ def find_eigenvalues(A):
     print("Eigenvalues:")
     print(D)
 
-def analyze_keypoints(keypoints1, keypoints2):
-    assert(len(keypoints1) == len(keypoints2))
-
-    pointsA = []
-    pointsB = []
-    for i in range(len(keypoints1)):
-        pointsA.append(keypoints1[i].pt)
-        pointsB.append(keypoints2[i].pt)
-
-    pointsA = np.array(pointsA)
-    pointsB = np.array(pointsB)
-
-    print(pointsA.shape)
-    print(pointsB.shape)
-    print(K.shape)
+def analyze_keypoints(pointsA, pointsB):
 
     essential_matrix, _ = cv2.findEssentialMat(pointsA, pointsB, K)
 
-    U, D, V_t = np.linalg.svd(essential_matrix, full_matrices = False)
-    print(D)
-    D[0] = 1
-    D[1] = 1
-    D[2] = 0
-
-    essential_matrix = U @ np.diag(D) @ V_t
-
-    translation = U @ W @ np.diag(D) @ U.T
-    rotation1 = U @ np.matrix(InvW) @ V_t
-    rotation2 = U @ np.matrix(InvW).T @ V_t
-
-    return essential_matrix, translation, [rotation1, rotation2]
-
-def get_epipole(essential, pointA, pointB):
-    x = np.append(np.array(pointB), 1)
-    xt = np.transpose(np.append(np.array(pointA), 1))
+    return essential_matrix
     
-    result = xt @ essential @ x
+ #   U, D, V_t = np.linalg.svd(essential_matrix, full_matrices = False)
+ #   print(D)
+ #   D[0] = 1
+ #   D[1] = 1
+ #   D[2] = 0
 
-    return result
+ #   essential_matrix = U @ np.diag(D) @ V_t
 
-def find_epipole_error(keypoints, essential_matrix):
-    total_error = 0
-    for point in keypoints:
-        total_error += get_epipole(essential_matrix, point.pt, point.pt)
-    print("Average Error:")
-    print(total_error / len(keypoints))
+ #   return essential_matrix
 
-def validate_key_points(img1, img2):
-    cv2.imshow('Image 1', img1)
-    cv2.imshow('Image 2', img2)
-    cv2.waitKey(0)
-
-def print_3d_points(point_array):
-    print("POINTS")
-    for pt in point_array:
-        print(pt)
+def triangulate(essential_matrix, points1, points2):
+    retval, R, t, mask, homogenousPoints = cv2.recoverPose(essential_matrix, points1, points2, K, 10000, None, None, None, None)
+    triangulatedPoints = homogenousPoints[0:3, :] / homogenousPoints[3, :]
+    return triangulatedPoints
 
 def main():
     image1 = sys.argv[1]
@@ -87,6 +48,21 @@ def main():
     img2 = imutils.resize(img2, width=500)
 
     keypoints1, keypoints2 = mf(img1, img2)
+    assert(len(keypoints1) == len(keypoints2))
+
+    pointsA = []
+    pointsB = []
+    for i in range(len(keypoints1)):
+        pointsA.append(keypoints1[i].pt)
+        pointsB.append(keypoints2[i].pt)
+
+    pointsA = np.array(pointsA)
+    pointsB = np.array(pointsB)
+
+    print("POINTSA")
+    print(pointsA.shape)
+    print("POINTSB")
+    print(pointsB.shape)
 
     for i in range(0, len(keypoints1)):
         point = keypoints1[i].pt
@@ -99,56 +75,17 @@ def main():
 
     # validate_key_points(img1, img2)
 
-    essential_matrix, translation_matrix, rotations = analyze_keypoints(keypoints1, keypoints2)
+    essential_matrix = analyze_keypoints(pointsA, pointsB)
     print("ESSENTIAL MATRIX")
     print(essential_matrix)
-    print("ROTATIONS")
-    print(rotations)
 
-    t1 = translation_matrix[2][1]
-    t2 = translation_matrix[0][2]
-    t3 = translation_matrix[1][0]
-    translation = np.array([t1, t2, t3])
-    
-    translations = [translation, -1 * translation]
+    print("TRIANGULATED POINTS")
+    print(triangulate(essential_matrix, pointsA, pointsB))
 
-    print("TRANSLATION")
-    print(translation)
+    cv2.imshow("A", img1)
+    cv2.imshow("B", img2)
 
-    print(essential_matrix @ translation)
-
-    find_epipole_error(keypoints1, essential_matrix)
-
-    min = np.inf
-    best_reconstruct = []
-    point_pairs = zip(keypoints1, keypoints2)
-    for rotation in rotations:
-        for translation in translations:
-            counter = 0
-            for point_pair in point_pairs:
-                val = triangulation(rotation, translation, K, point_pair[0].pt, point_pair[1].pt)
-                if val is None:
-                    counter = counter + 1
-            if counter < min:
-                min = counter
-                best_reconstruct = (rotation, translation)
-
-    print("MIN")
-    print(min)
-
-    points_in_3D_x = []
-    points_in_3D_y = []
-    points_in_3D_z = []
-    for point_pair in point_pairs:
-        val = triangulation(best_reconstruct[0], best_reconstruct[1], K, point_pair[0].pt, point_pair[1].pt)
-        if not val is None:
-            points_in_3D_x.append(val[0])
-            points_in_3D_y.append(val[1])
-            points_in_3D_z.append(val[2])
-
-    Axes3D.scatter(points_in_3D_x, points_in_3D_y, points_in_3D_z)
-
-    # print_3d_points(points_in_3d)
+    cv2.waitKey(0)
 
 if __name__ == '__main__':
     main()
